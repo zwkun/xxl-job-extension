@@ -33,39 +33,125 @@ import yj.job.annotation.JobDescription;
 @JobComponent
 public class TestJob {
 
-    public String testJob1() {
-        System.out.println("testJob1");
-        return "123";
-    }
 
-    @JobDescription(parent = "testJob1")
-    public String testJob2(String s) {
-        System.out.println("testJob2");
-        System.out.println("s = " + s);
+   //---------------------------------单节点-start----------------------------------------------------------------------
+   public void single() {
+      System.out.println("single");
+   }
 
-        return "456";
-    }
+   //---------------------------------单节点-end------------------------------------------------------------------------
+   //---------------------------------串行-start------------------------------------------------------------------------
+   //top
+   public String top() {
+      System.out.println("top");
+      return "top";
+   }
 
-    @JobDescription(parent = "testJob1", aggregate = "testJob5")
-    public String testJob3(String s) {
-        System.out.println("testJob3");
-        System.out.println("s = " + s);
-        return "456";
-    }
+   //second
+   @JobDescription(parent = "top")
+   public String second(String v) {
+      System.out.println("second");
+      System.out.println("v = " + v);
+      return "second";
+   }
 
-    @JobDescription(parent = "testJob2", aggregate = "testJob5")
-    public String testJob4(String s) {
-        System.out.println("testJob4");
-        System.out.println("s = " + s);
-        return "456";
-    }
+   //third
+   @JobDescription(parent = "second")
+   public String third(String v) {
+      System.out.println("third");
+      System.out.println("v = " + v);
+      return "third";
+   }
 
-    @JobDescription
-    public void testJob5(String s) {
-        System.out.println("testJob5");
-        System.out.println("s = " + s);
-    }
+   //last
+   @JobDescription(parent = "third")
+   public void last(String v) {
+      System.out.println("last");
+      System.out.println("v = " + v);
+   }
+   //---------------------------------串行-end--------------------------------------------------------------------------
+   //---------------------------------循环-start------------------------------------------------------------------------
+
+   //last
+   @JobDescription(parent = "circulate2")
+   public String circulate1(String v) {
+      System.out.println("circulate1");
+      System.out.println("v = " + v);
+      return "circulate1";
+   }
+
+   //last
+   @JobDescription(parent = "circulate1")
+   public String circulate2(String v) {
+      System.out.println("circulate2");
+      System.out.println("v = " + v);
+      return "circulate2";
+   }
+
+   //---------------------------------循环-end--------------------------------------------------------------------------
+   //---------------------------------广播-start------------------------------------------------------------------------
+   public String broadcast() {
+      System.out.println("broadcast");
+      return "123";
+   }
+
+   @JobDescription(parent = "broadcast")
+   public void broadcastChild1(String v) {
+      System.out.println("broadcastChild1");
+      System.out.println("v = " + v);
+
+   }
+
+   @JobDescription(parent = "broadcast")
+   public void broadcastChild2(String v) {
+      System.out.println("broadcastChild2");
+      System.out.println("v = " + v);
+
+   }
+
+   @JobDescription(parent = "broadcast")
+   public void broadcastChild3(String v) {
+      System.out.println("broadcastChild3");
+      System.out.println("v = " + v);
+
+   }
+
+   //---------------------------------广播-end--------------------------------------------------------------------------
+   //---------------------------------广播+聚合-start--------------------------------------------------------------------
+   public String broadcastAndAggregate() {
+      System.out.println("broadcastAndAggregate");
+      return "123";
+   }
+
+   @JobDescription(parent = "broadcastAndAggregate", aggregate = "aggregate")
+   public String broadcastAndAggregateChild1(String v) {
+      System.out.println("broadcastAndAggregateChild1");
+      System.out.println("v = " + v);
+      return "done";
+   }
+
+   @JobDescription(parent = "broadcastAndAggregate", aggregate = "aggregate")
+   public String broadcastAndAggregateChild2(String v) {
+      System.out.println("broadcastAndAggregateChild2");
+      System.out.println("v = " + v);
+      return "done";
+   }
+
+   @JobDescription(parent = "broadcastAndAggregate", aggregate = "aggregate")
+   public String broadcastAndAggregateChild3(String v) {
+      System.out.println("broadcastAndAggregateChild3");
+      System.out.println("v = " + v);
+      return "done";
+   }
+
+   public void aggregate(String v) {
+      System.out.println("aggregate");
+      System.out.println("v = " + v);
+   }
+   //---------------------------------广播+聚合-end----------------------------------------------------------------------
+
 }
+
 ```
 生成类
 ```java
@@ -79,121 +165,350 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class TestJob$Job$ extends AbstractJob {
-    @Autowired
-    private TestJob job;
+   @Autowired
+   private TestJob job;
 
-    public TestJob$Job$() {
-    }
+   public TestJob$Job$() {
+   }
 
-    @XxlRegister(
-        cron = "0/10 * * * * ?",
-        author = "以见科技",
-        jobDesc = "testJob1",
-        jobGroup = "test-job",
-        jobGroupTitle = "asdf",
-        executorRouteStrategy = "ROUND",
-        triggerStatus = 0,
-        jobGroupAddressType = 0
-    )
-    @XxlJob("testJob1")
-    public void testJob1$Method$1() {
-        String var2 = this.job.testJob1();
-        this.leftPush("yj:job:TestJob:testJob2:String,yj:job:TestJob:testJob3:String", var2);
-    }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "last",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("last")
+   public void last$Method$1() {
+      String var1 = this.popKey("yj:job:TestJob:last:String");
 
-    @XxlRegister(
-        cron = "0/10 * * * * ?",
-        author = "以见科技",
-        jobDesc = "testJob2",
-        jobGroup = "test-job",
-        jobGroupTitle = "asdf",
-        executorRouteStrategy = "ROUND",
-        triggerStatus = 0,
-        jobGroupAddressType = 0
-    )
-    @XxlJob("testJob2")
-    public void testJob2$Method$2() {
-        String var1 = this.popKey("yj:job:TestJob:testJob2:String");
+      try {
+         this.job.last(var1);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:last:String", var1);
+      }
 
-        try {
-            String var2 = this.job.testJob2(var1);
-            this.leftPush("yj:job:TestJob:testJob4:String", var2);
-        } catch (JobException var3) {
-            this.leftPush("yj:job:TestJob:testJob2:String", var1);
-        }
+   }
 
-    }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "second",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("second")
+   public void second$Method$2() {
+      String var1 = this.popKey("yj:job:TestJob:second:String");
 
-    @XxlRegister(
-        cron = "0/10 * * * * ?",
-        author = "以见科技",
-        jobDesc = "testJob4",
-        jobGroup = "test-job",
-        jobGroupTitle = "asdf",
-        executorRouteStrategy = "ROUND",
-        triggerStatus = 0,
-        jobGroupAddressType = 0
-    )
-    @XxlJob("testJob4")
-    public void testJob4$Method$3() {
-        String var1 = this.popKey("yj:job:TestJob:testJob4:String");
+      try {
+         String var2 = this.job.second(var1);
+         this.leftPush("yj:job:TestJob:third:String", var2);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:second:String", var1);
+      }
 
-        try {
-            String var2 = this.job.testJob4(var1);
-            if (this.jobDone("yj:job:TestJob:testJob5:String:done:", var2, 2)) {
-                this.leftPush("yj:job:TestJob:testJob5:String", var2);
-            }
-        } catch (JobException var3) {
-            this.leftPush("yj:job:TestJob:testJob4:String", var1);
-        }
+   }
 
-    }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcast",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcast")
+   public void broadcast$Method$3() {
+      String var2 = this.job.broadcast();
+      this.leftPush("yj:job:TestJob:broadcastChild1:String,yj:job:TestJob:broadcastChild2:String,yj:job:TestJob:broadcastChild3:String", var2);
+   }
 
-    @XxlRegister(
-        cron = "0/10 * * * * ?",
-        author = "以见科技",
-        jobDesc = "testJob3",
-        jobGroup = "test-job",
-        jobGroupTitle = "asdf",
-        executorRouteStrategy = "ROUND",
-        triggerStatus = 0,
-        jobGroupAddressType = 0
-    )
-    @XxlJob("testJob3")
-    public void testJob3$Method$4() {
-        String var1 = this.popKey("yj:job:TestJob:testJob3:String");
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "top",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("top")
+   public void top$Method$4() {
+      String var2 = this.job.top();
+      this.leftPush("yj:job:TestJob:second:String", var2);
+   }
 
-        try {
-            String var2 = this.job.testJob3(var1);
-            if (this.jobDone("yj:job:TestJob:testJob5:String:done:", var2, 2)) {
-                this.leftPush("yj:job:TestJob:testJob5:String", var2);
-            }
-        } catch (JobException var3) {
-            this.leftPush("yj:job:TestJob:testJob3:String", var1);
-        }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "aggregate",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("aggregate")
+   public void aggregate$Method$5() {
+      String var1 = this.popKey("yj:job:TestJob:aggregate:String");
 
-    }
+      try {
+         this.job.aggregate(var1);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:aggregate:String", var1);
+      }
 
-    @XxlRegister(
-        cron = "0/10 * * * * ?",
-        author = "以见科技",
-        jobDesc = "testJob5",
-        jobGroup = "test-job",
-        jobGroupTitle = "asdf",
-        executorRouteStrategy = "ROUND",
-        triggerStatus = 0,
-        jobGroupAddressType = 0
-    )
-    @XxlJob("testJob5")
-    public void testJob5$Method$5() {
-        String var1 = this.popKey("yj:job:TestJob:testJob5:String");
+   }
 
-        try {
-            this.job.testJob5(var1);
-        } catch (JobException var3) {
-            this.leftPush("yj:job:TestJob:testJob5:String", var1);
-        }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "single",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("single")
+   public void single$Method$6() {
+      this.job.single();
+   }
 
-    }
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "circulate1",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("circulate1")
+   public void circulate1$Method$7() {
+      String var1 = this.popKey("yj:job:TestJob:circulate1:String");
+
+      try {
+         String var2 = this.job.circulate1(var1);
+         this.leftPush("yj:job:TestJob:circulate2:String", var2);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:circulate1:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastChild1",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastChild1")
+   public void broadcastChild1$Method$8() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastChild1:String");
+
+      try {
+         this.job.broadcastChild1(var1);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastChild1:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastChild2",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastChild2")
+   public void broadcastChild2$Method$9() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastChild2:String");
+
+      try {
+         this.job.broadcastChild2(var1);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastChild2:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastChild3",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastChild3")
+   public void broadcastChild3$Method$10() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastChild3:String");
+
+      try {
+         this.job.broadcastChild3(var1);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastChild3:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "third",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("third")
+   public void third$Method$11() {
+      String var1 = this.popKey("yj:job:TestJob:third:String");
+
+      try {
+         String var2 = this.job.third(var1);
+         this.leftPush("yj:job:TestJob:last:String", var2);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:third:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "circulate2",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("circulate2")
+   public void circulate2$Method$12() {
+      String var1 = this.popKey("yj:job:TestJob:circulate2:String");
+
+      try {
+         String var2 = this.job.circulate2(var1);
+         this.leftPush("yj:job:TestJob:circulate1:String", var2);
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:circulate2:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastAndAggregateChild3",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastAndAggregateChild3")
+   public void broadcastAndAggregateChild3$Method$13() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastAndAggregateChild3:String");
+
+      try {
+         String var2 = this.job.broadcastAndAggregateChild3(var1);
+         if (this.jobDone("yj:job:TestJob:aggregate:String:done:", var2, 3)) {
+            this.leftPush("yj:job:TestJob:aggregate:String", var2);
+         }
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastAndAggregateChild3:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastAndAggregate",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastAndAggregate")
+   public void broadcastAndAggregate$Method$14() {
+      String var2 = this.job.broadcastAndAggregate();
+      this.leftPush("yj:job:TestJob:broadcastAndAggregateChild3:String,yj:job:TestJob:broadcastAndAggregateChild2:String,yj:job:TestJob:broadcastAndAggregateChild1:String", var2);
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastAndAggregateChild2",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastAndAggregateChild2")
+   public void broadcastAndAggregateChild2$Method$15() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastAndAggregateChild2:String");
+
+      try {
+         String var2 = this.job.broadcastAndAggregateChild2(var1);
+         if (this.jobDone("yj:job:TestJob:aggregate:String:done:", var2, 3)) {
+            this.leftPush("yj:job:TestJob:aggregate:String", var2);
+         }
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastAndAggregateChild2:String", var1);
+      }
+
+   }
+
+   @XxlRegister(
+           cron = "0/10 * * * * ?",
+           author = "以见科技",
+           jobDesc = "broadcastAndAggregateChild1",
+           jobGroup = "test-job",
+           jobGroupTitle = "asdf",
+           executorRouteStrategy = "ROUND",
+           triggerStatus = 0,
+           jobGroupAddressType = 0
+   )
+   @XxlJob("broadcastAndAggregateChild1")
+   public void broadcastAndAggregateChild1$Method$16() {
+      String var1 = this.popKey("yj:job:TestJob:broadcastAndAggregateChild1:String");
+
+      try {
+         String var2 = this.job.broadcastAndAggregateChild1(var1);
+         if (this.jobDone("yj:job:TestJob:aggregate:String:done:", var2, 3)) {
+            this.leftPush("yj:job:TestJob:aggregate:String", var2);
+         }
+      } catch (JobException var3) {
+         this.leftPush("yj:job:TestJob:broadcastAndAggregateChild1:String", var1);
+      }
+
+   }
 }
 ```
