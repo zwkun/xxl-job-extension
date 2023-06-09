@@ -6,6 +6,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.EnvironmentAware;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +18,7 @@ import org.springframework.stereotype.Component;
  * @date 2023/5/31 14:45
  */
 @Component
-@ConditionalOnProperty(name = "self.xxljob.enable", havingValue = "true")
+@Conditional(ScanCondition.class)
 public class JobBeanFactoryPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware {
 
     private String scanPackage;

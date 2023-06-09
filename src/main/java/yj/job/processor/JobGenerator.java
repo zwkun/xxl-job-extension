@@ -6,6 +6,7 @@ import org.objectweb.asm.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodIntrospector;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 import yj.job.JobException;
 import yj.job.annotation.JobDescription;
@@ -85,6 +86,7 @@ public class JobGenerator {
         //生成类名
         String className = internalName + "$Job$";
         cw.visit(V1_8, ACC_PUBLIC | ACC_FINAL, className, null, SUPER_JOB, null);
+        visitAnnotation(cw);
         //添加字段
         visitField(cw, originClass);
         //添加构造器
@@ -113,6 +115,10 @@ public class JobGenerator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void visitAnnotation(ClassWriter cw) {
+        cw.visitAnnotation(Type.getDescriptor(Component.class), true);
     }
 
     /**
