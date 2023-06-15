@@ -54,4 +54,20 @@
             <version>2.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
+    <distributionManagement>
+        <!--正式版本-->
+        <repository>
+            <!-- nexus服务器中用户名：在settings.xml中<server>的id-->
+            <id>nexus-releases</id>
+            <!-- 这个名称自己定义 -->
+            <!--            <name>nexus-releases</name>-->
+            <url>http://192.168.50.77:9003/repository/maven-public/</url>
+        </repository>
+        <!-- 快照版本 -->
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <!--            <name>Snapshot</name>-->
+            <url>http://192.168.50.77:9003/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
