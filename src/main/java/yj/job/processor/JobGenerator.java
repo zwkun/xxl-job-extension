@@ -10,11 +10,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 import yj.job.JobException;
 import yj.job.annotation.JobDescription;
+import yj.utils.UtilsJackSon;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -77,11 +79,12 @@ public class JobGenerator {
                 (ReflectionUtils.MethodFilter) m -> (
                         Modifier.isPublic(m.getModifiers())
                                 && !Modifier.isStatic(m.getModifiers())));
-        //分析依赖关系
-        analysisDependency(methods);
-
         //原始类名
         String internalName = Type.getInternalName(originClass);
+        //分析依赖关系
+        analysisDependency(methods);
+        generateDependencyJson(internalName);
+
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         //生成类名
         String className = internalName + "$Job$";
@@ -114,6 +117,40 @@ public class JobGenerator {
             return (Class<?>) defineClassMethod.invoke(classLoader, className.replace("/", "."), bytes, 0, bytes.length);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void generateDependencyJson(String internalName) {
+        Map<String, Map<String, List<String>>> map = new HashMap<>();
+        handleJson(map, parentAndChildren, "parentAndChildren");
+        handleJson(map, aggregateAndParent, "aggregateAndParent");
+
+
+        String path = System.getProperty("save.job.generate.class.path");
+        if (path != null) {
+            File file = new File(path + internalName + ".json");
+            File parentFile = file.getParentFile();
+            if (!parentFile.exists()) {
+                parentFile.mkdirs();
+            }
+            try (FileOutputStream outputStream = new FileOutputStream(file)) {
+                String json = UtilsJackSon.objToJson(map);
+                outputStream.write(json.getBytes(StandardCharsets.UTF_8));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    private void handleJson(Map<String, Map<String, List<String>>> map, Map<Method, List<Method>> aggregateAndParent, String key) {
+        if (!aggregateAndParent.isEmpty()) {
+            Map<String, List<String>> aap = new HashMap<>();
+            for (Map.Entry<Method, List<Method>> entry : aggregateAndParent.entrySet()) {
+                Method aggregate = entry.getKey();
+                aap.put(getJobName(aggregate), entry.getValue().stream().map(this::getJobName).collect(Collectors.toList()));
+            }
+            map.put(key, aap);
         }
     }
 
