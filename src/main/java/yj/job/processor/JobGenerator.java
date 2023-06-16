@@ -8,8 +8,13 @@ import org.springframework.core.MethodIntrospector;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
+import org.stringtemplate.v4.ST;
+import org.stringtemplate.v4.STGroup;
+import org.stringtemplate.v4.STGroupFile;
 import yj.job.JobException;
 import yj.job.annotation.JobDescription;
+import yj.job.data.JobTemplateData;
+import yj.job.data.XxlRegisterData;
 import yj.utils.UtilsJackSon;
 
 import java.io.File;
@@ -74,11 +79,7 @@ public class JobGenerator {
      */
     public Class<?> generateJobClass(Class<?> originClass) {
         //找到所有的public但不是static的任务
-        Set<Method> methods = MethodIntrospector.selectMethods(
-                originClass,
-                (ReflectionUtils.MethodFilter) m -> (
-                        Modifier.isPublic(m.getModifiers())
-                                && !Modifier.isStatic(m.getModifiers())));
+        Set<Method> methods = getJobMethods(originClass);
         //原始类名
         String internalName = Type.getInternalName(originClass);
         //分析依赖关系
@@ -118,6 +119,23 @@ public class JobGenerator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 获取任务的方法
+     *
+     * @param originClass
+     * @return java.util.Set<java.lang.reflect.Method>
+     * @throws
+     * @author zwk
+     * @date 2023/6/16 14:33
+     */
+    private Set<Method> getJobMethods(Class<?> originClass) {
+        return MethodIntrospector.selectMethods(
+                originClass,
+                (ReflectionUtils.MethodFilter) m -> (
+                        Modifier.isPublic(m.getModifiers())
+                                && !Modifier.isStatic(m.getModifiers())));
     }
 
     private void generateDependencyJson(String internalName) {
@@ -510,6 +528,151 @@ public class JobGenerator {
         fv.visitAnnotation(Type.getDescriptor(Autowired.class), true);
         fv.visitEnd();
     }
+
+
+    public void generateJobSource(Class<?> originClass) {
+        Set<Method> jobMethods = getJobMethods(originClass);
+
+        //原始类名
+        String internalName = Type.getInternalName(originClass);
+        //分析依赖关系
+        analysisDependency(jobMethods);
+
+        generateDependencyJson(internalName);
+
+        STGroup group = new STGroupFile("generate.stg");
+        StringBuilder builder = new StringBuilder();
+        appendHeader(builder, originClass, group);
+        appendBody(builder, jobMethods, group, originClass);
+        appendFooter(builder, group);
+
+
+        String path = "target/generated-sources/java/";
+        File file = new File(path + originClass.getName().replace(".", "/") + "$Job$" + ".java");
+        File parentFile = file.getParentFile();
+        if (!parentFile.exists()) {
+            parentFile.mkdirs();
+        }
+        try (FileOutputStream outputStream = new FileOutputStream(file)) {
+            outputStream.write(builder.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private void appendBody(StringBuilder builder, Set<Method> jobMethods, STGroup group, Class<?> originClass) {
+        for (Method method : jobMethods) {
+            appendMethodBody(builder, method, group, originClass);
+        }
+    }
+
+    private void appendMethodBody(StringBuilder builder, Method method, STGroup group, Class<?> originClass) {
+        JobDescription jd = method.getAnnotation(JobDescription.class);
+        //方法参数不能多于1个
+        int count = method.getParameterCount();
+        if (count > 1) {
+            throw new RuntimeException("job parameter count too much,maybe 0 or 1");
+        }
+        //方法参数必须是string
+        if (count == 1) {
+            Class<?> parameterType = method.getParameterTypes()[0];
+            if (parameterType != String.class) {
+                throw new RuntimeException("job parameter type must be String");
+            }
+        }
+        //是否需要重试
+        boolean needRetry = (jd != null && !"".equals(jd.parent()) && count == 1) || aggregateAndParent.containsKey(method);
+        ST body = group.getInstanceOf("body");
+        JobTemplateData jobTemplateData = new JobTemplateData();
+        jobTemplateData.setMethodName(method.getName() + "$Method$" + index.getAndIncrement());
+        jobTemplateData.setJobName(getJobName(method));
+        jobTemplateData.setJobMethodName(method.getName());
+        jobTemplateData.setNeedRetry(needRetry);
+        if (count != 0) {
+            if (jd != null && !"".equals(jd.parent()) || aggregateAndParent.containsKey(method)) {
+                jobTemplateData.setPopKey(getJobKey(originClass, method));
+            }
+        }
+        if (parentAndChildren.containsKey(method)) {
+            List<Method> methods = parentAndChildren.get(method);
+            String keys = methods.stream().map(m -> getJobKey(originClass, m)).collect(Collectors.joining(","));
+            jobTemplateData.setPushKey(keys);
+        } else if (aggregateAndChild.containsKey(method)) {
+            Method child = aggregateAndChild.get(method);
+            String jobKey = getJobKey(originClass, child);
+            jobTemplateData.setPushKey(jobKey);
+            jobTemplateData.setDoneKey(jobKey + ":done:");
+            jobTemplateData.setDoneCount(aggregateAndParent.get(child).size());
+        }
+
+        XxlRegisterData registerData = getRegisterData(method);
+        jobTemplateData.setRegisterData(registerData);
+        body.add("data", jobTemplateData);
+        builder.append(body.render());
+    }
+
+    private XxlRegisterData getRegisterData(Method method) {
+        XxlRegisterData registerData = new XxlRegisterData();
+        JobDescription jd = method.getAnnotation(JobDescription.class);
+        XxlRegister annotation = method.getAnnotation(XxlRegister.class);
+        String jobName = method.getName();
+        if (jd != null && !"".equals(jd.name())) {
+            jobName = jd.name();
+        }
+        String cron = "0/10 * * * * ?";
+        String author = "以见科技";
+        String jobDesc = jobName;
+        String jobGroup = "";
+        String jobGroupTitle = "";
+        String executorRouteStrategy = "ROUND";
+        int triggerStatus = 0;
+        int jobGroupAddressType = 0;
+        if (annotation != null) {
+            cron = annotation.cron();
+            author = annotation.author();
+            jobDesc = annotation.jobDesc();
+            jobGroup = annotation.jobGroup();
+            jobGroupTitle = annotation.jobGroupTitle();
+            executorRouteStrategy = annotation.executorRouteStrategy();
+            triggerStatus = annotation.triggerStatus();
+            jobGroupAddressType = annotation.jobGroupAddressType();
+        }
+        //添加 XxlRegister 注解
+
+        //jobGroup 为空则从配置文件中取值
+        if ("".equals(jobGroup)) {
+            jobGroup = environment.getProperty("xxl.job.executor.appname");
+        }
+        //jobGroupTitle 为空则从配置文件中取值
+        if ("".equals(jobGroupTitle)) {
+            jobGroupTitle = environment.getProperty("xxl.job.executor.title");
+        }
+        registerData.setCron(cron);
+        registerData.setAuthor(author);
+        registerData.setJobDesc(jobDesc);
+        registerData.setJobGroup(jobGroup);
+        registerData.setJobGroupTitle(jobGroupTitle);
+        registerData.setExecutorRouteStrategy(executorRouteStrategy);
+        registerData.setTriggerStatus(triggerStatus);
+        registerData.setJobGroupAddressType(jobGroupAddressType);
+        return registerData;
+    }
+
+    private void appendFooter(StringBuilder builder, STGroup group) {
+        ST footer = group.getInstanceOf("footer");
+        builder.append(footer.render());
+    }
+
+    private void appendHeader(StringBuilder builder, Class<?> originClass, STGroup group) {
+        String jobName = originClass.getName();
+        String className = originClass.getSimpleName() + "$Job$";
+        ST header = group.getInstanceOf("header");
+        header.add("jobName", jobName);
+        header.add("className", className);
+        builder.append(header.render());
+    }
+
 
     static {
         try {

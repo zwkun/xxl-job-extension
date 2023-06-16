@@ -72,8 +72,13 @@ public class ClassPathJobScanner {
      */
     private void registerJob(String originClassName) throws ClassNotFoundException {
         Class<?> clazz = Class.forName(originClassName);
-        Class<?> jobClass = new JobGenerator(environment).generateJobClass(clazz);
-        registry.registerBeanDefinition(jobClass.getName(), new RootBeanDefinition(jobClass));
+        String property = environment.getProperty("self.xxljob.scan.generate.source", "false");
+        if (Boolean.parseBoolean(property)) {
+            new JobGenerator(environment).generateJobSource(clazz);
+        } else {
+            Class<?> jobClass = new JobGenerator(environment).generateJobClass(clazz);
+            registry.registerBeanDefinition(jobClass.getName(), new RootBeanDefinition(jobClass));
+        }
     }
 
     /**

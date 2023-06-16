@@ -1,0 +1,45 @@
+header(jobName,className)::=<<
+package yj.job;
+
+import com.xxl.job.core.handler.annotation.XxlJob;
+import com.xxl.job.plus.executor.annotation.XxlRegister;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import <jobName>;
+
+@Component
+public final class <className> extends AbstractJob {
+    @Autowired
+    private <jobName> job;
+
+>>
+
+body(data)::=<<
+
+    @XxlRegister(cron = "<data.registerData.cron>", author = "<data.registerData.author>", jobDesc = "<data.registerData.jobDesc>", jobGroup = "<data.registerData.jobGroup>", jobGroupTitle = "<data.registerData.jobGroupTitle>", executorRouteStrategy = "<data.registerData.executorRouteStrategy>", triggerStatus = <data.registerData.triggerStatus>, jobGroupAddressType = <data.registerData.jobGroupAddressType>)
+    @XxlJob("<data.jobName>")
+    public void <data.methodName>() {
+        <if (data.popKey)>
+        String value = this.popKey("<data.popKey>");
+        <endif>
+        <if (data.needRetry)>
+        try {
+        <endif>
+            <if (data.pushKey)>String ret = <endif>this.job.<data.jobMethodName>(<if (data.popKey)>value<endif>);
+            <if (data.doneKey)>
+            if (this.jobDone("<data.doneKey>", ret, <data.doneCount>)) {
+                this.leftPush("<data.pushKey>", ret);
+            }
+            <elseif (data.pushKey)>
+            this.leftPush("<data.pushKey>", ret);
+            <endif>
+        <if (data.needRetry)>
+        } catch (JobException var3) {
+            this.leftPush("<data.popKey>", value);
+        }
+        <endif>
+    }
+
+>>
+
+footer()::="}"
