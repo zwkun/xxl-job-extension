@@ -82,7 +82,7 @@ public class JobGenerator {
 
         //原始类名
         String internalName = Type.getInternalName(originClass);
-        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         //生成类名
         String className = internalName + "$Job$";
         cw.visit(V1_8, ACC_PUBLIC | ACC_FINAL, className, null, SUPER_JOB, null);
@@ -335,6 +335,7 @@ public class JobGenerator {
             //子级任务全部执行完，执行leftPush方法
             mv.visitMethodInsn(INVOKEVIRTUAL, SUPER_JOB, "leftPush", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
             mv.visitLabel(label);
+            mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{"java/lang/String"}, 0, null);
 
             //其他类型
         } else if (method.getReturnType() != Void.TYPE) {
@@ -346,13 +347,18 @@ public class JobGenerator {
             mv.visitJumpInsn(GOTO, ret);
             //捕获异常后把从队列中弹出的值放回到队列中
             mv.visitLabel(handler);
-            mv.visitFrame(F_FULL, 2, new Object[]{className, "java/lang/String"}, 1, new Object[]{"yj/job/JobException"});
+            if (aggregateAndChild.containsKey(method)) {
+                mv.visitFrame(F_SAME1, 0, null, 1, new Object[]{"yj/job/JobException"});
+            } else {
+                mv.visitFrame(F_FULL, 2, new Object[]{className, "java/lang/String"}, 1, new Object[]{"yj/job/JobException"});
+            }
             mv.visitVarInsn(ASTORE, 2);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitLdcInsn(jobInKey);
             mv.visitVarInsn(ALOAD, 1);
             mv.visitMethodInsn(INVOKEVIRTUAL, SUPER_JOB, "leftPush", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
             mv.visitLabel(ret);
+            mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
         }
         mv.visitInsn(RETURN);
         mv.visitMaxs(0, 0);
