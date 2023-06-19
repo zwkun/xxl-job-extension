@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.springframework.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * 任务生成器
