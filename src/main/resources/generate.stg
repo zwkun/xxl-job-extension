@@ -25,7 +25,7 @@ body(data)::=<<
         <if (data.needRetry)>
         try {
         <endif>
-            <if (data.pushKey)>String ret = <endif>this.job.<data.jobMethodName>(<if (data.popKey)>value<endif>);
+            <if (data.pushKey)><if (data.doneKey)>String<else>Object<endif> ret = <endif>this.job.<data.jobMethodName>(<if (data.popKey)>value<endif>);
             <if (data.doneKey)>
             if (this.jobDone("<data.doneKey>", ret, <data.doneCount>)) {
                 this.leftPush("<data.pushKey>", ret);
