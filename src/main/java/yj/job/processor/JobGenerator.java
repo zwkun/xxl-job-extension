@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static org.springframework.asm.Opcodes.*;
+import static org.objectweb.asm.Opcodes.*;
 
 /**
  * 任务生成器
@@ -372,7 +372,7 @@ public class JobGenerator {
             //子级任务全部执行完，执行leftPush方法
             mv.visitMethodInsn(INVOKEVIRTUAL, SUPER_JOB, "leftPush", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
             mv.visitLabel(label);
-            mv.visitFrame(Opcodes.F_APPEND, 1, new Object[]{"java/lang/String"}, 0, null);
+            mv.visitFrame(F_APPEND, 1, new Object[]{"java/lang/String"}, 0, null);
 
             //其他类型
         } else if (method.getReturnType() != Void.TYPE) {
@@ -395,7 +395,7 @@ public class JobGenerator {
             mv.visitVarInsn(ALOAD, 1);
             mv.visitMethodInsn(INVOKEVIRTUAL, SUPER_JOB, "leftPush", "(Ljava/lang/String;Ljava/lang/Object;)V", false);
             mv.visitLabel(ret);
-            mv.visitFrame(Opcodes.F_SAME, 0, null, 0, null);
+            mv.visitFrame(F_SAME, 0, null, 0, null);
         }
         mv.visitInsn(RETURN);
         mv.visitMaxs(0, 0);
