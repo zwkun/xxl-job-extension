@@ -94,7 +94,7 @@ public abstract class AbstractJob {
      * @date 2023/6/8 10:39
      */
     public boolean jobDone(String key, String v, int finishCount) {
-        if (key == null) {
+        if (key == null || v == null) {
             return false;
         }
         finishCount = finishCount - 1;
