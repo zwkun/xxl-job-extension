@@ -88,7 +88,7 @@ public class JobGenerator {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         //生成类名
         String className = internalName + "$Job$";
-        cw.visit(V1_8, ACC_PUBLIC | ACC_FINAL, className, null, SUPER_JOB, null);
+        cw.visit(V1_8, ACC_PUBLIC , className, null, SUPER_JOB, null);
         visitAnnotation(cw);
         //添加字段
         visitField(cw, originClass);
